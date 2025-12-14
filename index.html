@@ -3,50 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <title>Number Announcer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <style>
         body {
+            margin: 0;
             font-family: Arial, sans-serif;
-            background: #f4f4f4;
-            height: 100vh;
+            background: #f2f2f2;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         .container {
-            background: #ffffff;
-            padding: 25px;
-            border-radius: 10px;
-            width: 300px;
+            background: #fff;
+            width: 90%;
+            max-width: 350px;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
             text-align: center;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
 
         h2 {
             margin-bottom: 20px;
+            font-size: 22px;
         }
 
         input {
             width: 100%;
-            padding: 10px;
-            font-size: 18px;
-            margin-bottom: 15px;
+            padding: 14px;
+            font-size: 20px;
             text-align: center;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            margin-bottom: 15px;
         }
 
         button {
             width: 100%;
-            padding: 10px;
-            font-size: 18px;
+            padding: 14px;
+            font-size: 20px;
+            border-radius: 8px;
+            border: none;
             background: #007bff;
             color: white;
-            border: none;
-            border-radius: 5px;
             cursor: pointer;
         }
 
-        button:hover {
-            background: #0056b3;
+        button:active {
+            transform: scale(0.98);
         }
     </style>
 </head>
@@ -55,43 +62,63 @@
 <div class="container">
     <h2>🔊 Number Announcer</h2>
     <input type="number" id="numberInput" placeholder="Enter number">
-    <button onclick="announceNumber()">Play</button>
+    <button id="playBtn">Play</button>
 </div>
 
 <script>
     const input = document.getElementById("numberInput");
+    const playBtn = document.getElementById("playBtn");
 
-    // Load last saved number
+    let voices = [];
+
+    // Load voices properly (important for Bluetooth)
+    function loadVoices() {
+        voices = speechSynthesis.getVoices();
+    }
+    speechSynthesis.onvoiceschanged = loadVoices;
+
+    // Restore saved number
     window.onload = () => {
-        const savedNumber = localStorage.getItem("lastNumber");
-        if (savedNumber !== null) {
-            input.value = savedNumber;
-        }
+        const saved = localStorage.getItem("lastNumber");
+        if (saved) input.value = saved;
+        loadVoices();
     };
 
-    function announceNumber() {
+    playBtn.addEventListener("click", () => {
         const number = input.value;
-
-        if (number === "") {
+        if (!number) {
             alert("Please enter a number");
             return;
         }
 
-        // Save number to localStorage
         localStorage.setItem("lastNumber", number);
 
-        // Stop any ongoing speech
-        window.speechSynthesis.cancel();
+        // Cancel any ongoing speech
+        speechSynthesis.cancel();
 
-        // Create speech
         const utterance = new SpeechSynthesisUtterance(number);
-        utterance.lang = "en-US";
-        utterance.rate = 1;
-        utterance.pitch = 1;
 
-        // Speak the number
-        window.speechSynthesis.speak(utterance);
-    }
+        // 🎙 Soft & slow speaking
+        utterance.rate = 0.85;   // slower
+        utterance.pitch = 0.9;   // softer
+        utterance.volume = 1.0;
+        utterance.lang = "en-US";
+
+        // Prefer a soft female/neutral voice (best for Bluetooth)
+        const preferredVoice = voices.find(v =>
+            v.lang === "en-US" &&
+            (v.name.toLowerCase().includes("female") ||
+             v.name.toLowerCase().includes("google") ||
+             v.name.toLowerCase().includes("samantha"))
+        );
+
+        if (preferredVoice) {
+            utterance.voice = preferredVoice;
+        }
+
+        // Speak only after user click (Bluetooth safe)
+        speechSynthesis.speak(utterance);
+    });
 </script>
 
 </body>
