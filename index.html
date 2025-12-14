@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Number Announcer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 10px;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            font-size: 18px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🔊 Number Announcer</h2>
+    <input type="number" id="numberInput" placeholder="Enter number">
+    <button onclick="announceNumber()">Play</button>
+</div>
+
+<script>
+    const input = document.getElementById("numberInput");
+
+    // Load last saved number
+    window.onload = () => {
+        const savedNumber = localStorage.getItem("lastNumber");
+        if (savedNumber !== null) {
+            input.value = savedNumber;
+        }
+    };
+
+    function announceNumber() {
+        const number = input.value;
+
+        if (number === "") {
+            alert("Please enter a number");
+            return;
+        }
+
+        // Save number to localStorage
+        localStorage.setItem("lastNumber", number);
+
+        // Stop any ongoing speech
+        window.speechSynthesis.cancel();
+
+        // Create speech
+        const utterance = new SpeechSynthesisUtterance(number);
+        utterance.lang = "en-US";
+        utterance.rate = 1;
+        utterance.pitch = 1;
+
+        // Speak the number
+        window.speechSynthesis.speak(utterance);
+    }
+</script>
+
+</body>
+</html>
