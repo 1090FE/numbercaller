@@ -66,59 +66,98 @@
 </div>
 
 <script>
-    const input = document.getElementById("numberInput");
-    const playBtn = document.getElementById("playBtn");
+const input = document.getElementById("numberInput");
+const playBtn = document.getElementById("playBtn");
 
-    let voices = [];
+let voices = [];
+let audioFallback = null;
 
-    // Load voices properly (important for Bluetooth)
-    function loadVoices() {
-        voices = speechSynthesis.getVoices();
+/* ---------- LOAD VOICES ---------- */
+function loadVoices() {
+    voices = speechSynthesis.getVoices();
+}
+speechSynthesis.onvoiceschanged = loadVoices;
+
+/* ---------- FALLBACK AUDIO ---------- */
+// Example MP3 (replace with your own recorded files)
+function playFallback(number) {
+    if (audioFallback) {
+        audioFallback.pause();
+        audioFallback.currentTime = 0;
     }
-    speechSynthesis.onvoiceschanged = loadVoices;
 
-    // Restore saved number
-    window.onload = () => {
-        const saved = localStorage.getItem("lastNumber");
-        if (saved) input.value = saved;
-        loadVoices();
+    audioFallback = new Audio(`audio/${number}.mp3`);
+    audioFallback.play().catch(err => {
+        alert("Audio playback blocked. Please tap again.");
+        console.error(err);
+    });
+}
+
+/* ---------- INIT ---------- */
+window.onload = () => {
+    loadVoices();
+    const saved = localStorage.getItem("lastNumber");
+    if (saved) input.value = saved;
+};
+
+/* ---------- MAIN PLAY ---------- */
+playBtn.addEventListener("click", () => {
+    const number = input.value.trim();
+    if (!number) {
+        alert("Please enter a number");
+        return;
+    }
+
+    localStorage.setItem("lastNumber", number);
+
+    // Reload voices (important for Bluetooth)
+    voices = speechSynthesis.getVoices();
+
+    // Stop previous speech
+    speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(number);
+    utterance.lang = "en-US";
+    utterance.rate = 0.85;
+    utterance.pitch = 0.9;
+    utterance.volume = 1.0;
+
+    // Preferred voice
+    const preferredVoice = voices.find(v =>
+        v.lang === "en-US" &&
+        (v.name.toLowerCase().includes("google") ||
+         v.name.toLowerCase().includes("female") ||
+         v.name.toLowerCase().includes("samantha"))
+    );
+
+    if (preferredVoice) {
+        utterance.voice = preferredVoice;
+    }
+
+    let spoke = false;
+
+    utterance.onstart = () => {
+        spoke = true;
     };
 
-    playBtn.addEventListener("click", () => {
-        const number = input.value;
-        if (!number) {
-            alert("Please enter a number");
-            return;
-        }
+    utterance.onerror = () => {
+        console.warn("TTS failed, using fallback");
+        playFallback(number);
+    };
 
-        localStorage.setItem("lastNumber", number);
-
-        // Cancel any ongoing speech
-        speechSynthesis.cancel();
-
-        const utterance = new SpeechSynthesisUtterance(number);
-
-        // 🎙 Soft & slow speaking
-        utterance.rate = 0.85;   // slower
-        utterance.pitch = 0.9;   // softer
-        utterance.volume = 1.0;
-        utterance.lang = "en-US";
-
-        // Prefer a soft female/neutral voice (best for Bluetooth)
-        const preferredVoice = voices.find(v =>
-            v.lang === "en-US" &&
-            (v.name.toLowerCase().includes("female") ||
-             v.name.toLowerCase().includes("google") ||
-             v.name.toLowerCase().includes("samantha"))
-        );
-
-        if (preferredVoice) {
-            utterance.voice = preferredVoice;
-        }
-
-        // Speak only after user click (Bluetooth safe)
+    // 🚨 Bluetooth routing delay (CRITICAL)
+    setTimeout(() => {
         speechSynthesis.speak(utterance);
-    });
+
+        // If no sound detected → fallback
+        setTimeout(() => {
+            if (!spoke) {
+                console.warn("No sound detected, fallback audio");
+                playFallback(number);
+            }
+        }, 1200);
+    }, 300);
+});
 </script>
 
 </body>
